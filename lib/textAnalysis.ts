@@ -261,16 +261,49 @@ export function keywords(text: string, n = 4): string[] {
     .map((x) => x.w);
 }
 
+// People who tend to be the subject of a bit, plus the nouns a comedian most
+// often hangs a joke on. Used to bias the subject pick toward who the joke is
+// about rather than the loudest noun in the line.
+const PERSON_NOUNS = new Set([
+  "ex","wife","husband","girlfriend","boyfriend","mom","mother","dad","father",
+  "brother","sister","friend","boss","kid","kids","child","children","daughter",
+  "son","grandma","grandpa","grandmother","grandfather","cop","priest","teacher",
+  "doctor","baby","roommate","neighbor","coworker","uncle","aunt","cousin",
+  "partner","family","parents","manager","landlord","therapist","nurse","wife",
+]);
+
+const POSSESSIVES = new Set([
+  "my","your","our","his","her","their","its",
+]);
+
+// Nouns that directly follow a possessive ("my kid", "her boss"). The thing
+// you own or relate to is almost always the subject of the bit.
+export function possessiveNouns(text: string): Set<string> {
+  const toks = tokenize(text);
+  const out = new Set<string>();
+  for (let i = 0; i < toks.length - 1; i++) {
+    if (POSSESSIVES.has(toks[i])) {
+      const w = toks[i + 1].replace(/^'+|'+$/g, "");
+      if (w.length >= 2 && !STOPWORDS.has(w)) out.add(w);
+    }
+  }
+  return out;
+}
+
 export function subjectGuess(text: string): string {
-  // The subject is usually an early, strong noun. Weigh score but keep a
-  // bias toward words that appear near the front of the line.
+  // The subject is who the joke is about. Weigh noun strength and position,
+  // but lean hard toward a possessed noun ("my kid") and toward person words,
+  // since the loudest noun is often not the subject.
   const words = contentWords(text);
   if (words.length === 0) return "";
+  const poss = possessiveNouns(text);
   let best = words[0];
   let bestScore = -Infinity;
   words.forEach((w, i) => {
     const positional = i < 5 ? (5 - i) * 0.6 : 0;
-    const s = nounScore(w) + positional;
+    let s = nounScore(w) + positional;
+    if (poss.has(w)) s += 5; // "my kid" strongly signals the subject
+    if (PERSON_NOUNS.has(w)) s += 3;
     if (s > bestScore) {
       bestScore = s;
       best = w;
