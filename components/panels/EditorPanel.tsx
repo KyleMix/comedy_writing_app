@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { JokeNode } from "@/lib/types";
 import {
@@ -20,8 +20,10 @@ import {
   TAG_PASS_HELP,
 } from "@/lib/methodology";
 import { kindStyle } from "@/lib/kindStyles";
+import { specializeQuestion } from "@/lib/specialize";
 import { ActionButton, Checkbox, MonoTextarea, TextInput } from "../ui";
 import { AiSuggest } from "./AiSuggest";
+import { ScenarioSuggest } from "./ScenarioSuggest";
 
 function findPremiseText(nodes: JokeNode[], node: JokeNode): string {
   let current: JokeNode | undefined = node;
@@ -133,17 +135,20 @@ function PanelBody({ node }: { node: JokeNode }) {
 function PremiseEditor({ node }: { node: JokeNode }) {
   const setPremiseText = useStore((s) => s.setPremiseText);
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-bone/60">
-        Type your premise. One line. The thing the joke is about. Fill it and
-        the three questions plus the listing bubble pop out around it.
-      </p>
-      <MonoTextarea
-        value={node.body}
-        onChange={(v) => setPremiseText(node.id, v)}
-        placeholder="My ex is impossible to reach."
-        rows={3}
-      />
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <p className="text-sm text-bone/60">
+          Type your premise. One line. The thing the joke is about. Fill it and
+          the three questions plus the listing bubble pop out around it.
+        </p>
+        <MonoTextarea
+          value={node.body}
+          onChange={(v) => setPremiseText(node.id, v)}
+          placeholder="My ex is impossible to reach."
+          rows={3}
+        />
+      </div>
+      <ScenarioSuggest parentId={node.id} premise={node.body} />
     </div>
   );
 }
@@ -155,9 +160,17 @@ function QuestionEditor({
   node: JokeNode;
   premiseText: string;
 }) {
-  const spec = getQuestionSpec(node.questionType ?? "double_entendre");
+  const type = node.questionType ?? "double_entendre";
+  const spec = getQuestionSpec(type);
   const addIdeaChild = useStore((s) => s.addIdeaChild);
   const [draft, setDraft] = useState("");
+
+  // Tailor the question to the words actually in the premise. Offline and
+  // deterministic, sharpened by the AI suggest button below when a key is set.
+  const specific = useMemo(
+    () => specializeQuestion(type, premiseText),
+    [type, premiseText],
+  );
 
   function commit() {
     if (!draft.trim()) return;
@@ -171,7 +184,19 @@ function QuestionEditor({
         <h2 className="font-display text-xl text-bone leading-tight">
           {spec.title}
         </h2>
-        <p className="mt-2 text-sm text-bone/70">{spec.question}</p>
+        {specific.specific ? (
+          <>
+            <div className="mt-2 bg-ink-900 border-l-2 border-hazard rounded-r-lg px-3 py-2">
+              <p className="text-[10px] font-mono tracking-widest text-hazard mb-1">
+                FOR YOUR PREMISE
+              </p>
+              <p className="text-sm text-bone/90">{specific.specific}</p>
+            </div>
+            <p className="mt-2 text-xs text-bone/45">{specific.base}</p>
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-bone/70">{specific.base}</p>
+        )}
       </div>
       <div className="bg-ink-900 border border-ink-600 rounded-lg p-3">
         <p className="text-[10px] font-mono tracking-widest text-hazard mb-1">

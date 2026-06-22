@@ -22,6 +22,7 @@ function buildPrompt(opts: {
   premise: string;
   questionType?: QuestionType;
   listing?: boolean;
+  scenario?: boolean;
 }): string {
   const lines: string[] = [];
   lines.push(`Premise: ${opts.premise || "unspecified"}`);
@@ -39,15 +40,23 @@ function buildPrompt(opts: {
     lines.push(
       "Give 5 short concrete items mined from the element. Go into the minutiae.",
     );
+  } else if (opts.scenario) {
+    lines.push(
+      "Suggest 5 similar scenarios or adjacent situations that could move this joke along.",
+    );
+    lines.push(
+      "Each should reuse the same comedic engine but change the setting, the person, the stakes, or the scale, so the comedian gets a fresh angle to chase.",
+    );
+    lines.push("Reference the actual premise. Keep each to one short line.");
   } else {
     lines.push("Give 5 short candidate angles for this premise.");
   }
   return lines.join("\n");
 }
 
-export async function suggestAngles(
+async function callAnthropic(
   settings: Settings,
-  opts: { premise: string; questionType?: QuestionType; listing?: boolean },
+  prompt: string,
 ): Promise<string[]> {
   if (!aiEnabled(settings)) return [];
 
@@ -63,7 +72,7 @@ export async function suggestAngles(
       model: settings.anthropicModel || "claude-opus-4-8",
       max_tokens: 512,
       system: SYSTEM,
-      messages: [{ role: "user", content: buildPrompt(opts) }],
+      messages: [{ role: "user", content: prompt }],
     }),
   });
 
@@ -82,4 +91,19 @@ export async function suggestAngles(
     .map((l) => stripDashes(l))
     .filter((l) => l.length > 0)
     .slice(0, 5);
+}
+
+export async function suggestAngles(
+  settings: Settings,
+  opts: { premise: string; questionType?: QuestionType; listing?: boolean },
+): Promise<string[]> {
+  return callAnthropic(settings, buildPrompt(opts));
+}
+
+// AI sharpened version of the offline scenario suggestions.
+export async function suggestScenariosAI(
+  settings: Settings,
+  premise: string,
+): Promise<string[]> {
+  return callAnthropic(settings, buildPrompt({ premise, scenario: true }));
 }

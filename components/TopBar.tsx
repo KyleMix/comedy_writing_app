@@ -10,6 +10,7 @@ import {
 } from "@/lib/export";
 import { BoardPicker } from "./BoardPicker";
 import { SettingsModal } from "./SettingsModal";
+import { SubmitJokeModal } from "./SubmitJokeModal";
 
 export function TopBar({
   mode,
@@ -26,6 +27,7 @@ export function TopBar({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
 
   function currentBoard() {
     return {
@@ -70,6 +72,14 @@ export function TopBar({
           BOARD
         </span>
         <span className="truncate">{boardName}</span>
+      </button>
+
+      <button
+        onClick={() => setSubmitOpen(true)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hazard text-ink-900 text-sm font-mono font-semibold hover:bg-hazard/85 transition-colors"
+        title="Paste a full joke and break it down"
+      >
+        + Submit joke
       </button>
 
       <div className="flex-1" />
@@ -152,6 +162,15 @@ export function TopBar({
 
       {pickerOpen && <BoardPicker onClose={() => setPickerOpen(false)} />}
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {submitOpen && (
+        <SubmitJokeModal
+          onSubmitted={() => {
+            setSubmitOpen(false);
+            onModeChange("build");
+          }}
+          onClose={() => setSubmitOpen(false)}
+        />
+      )}
     </header>
   );
 }

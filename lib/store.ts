@@ -29,6 +29,7 @@ import {
   setActiveBoardId,
 } from "./storage";
 import { FALLBACK_QUESTIONS } from "./methodology";
+import { splitSentences, keywords } from "./textAnalysis";
 
 interface JokeForgeState {
   hydrated: boolean;
@@ -71,6 +72,7 @@ interface JokeForgeState {
   addClicheTo: (parentId: string) => string;
   addStoryTo: (parentId: string) => string;
   spawnFallbackQuestions: (premiseId: string) => void;
+  submitFullJoke: (text: string) => string;
   addTag: (parentId: string, text: string, tagType: "tag" | "topper") => string;
   promoteToPremise: (nodeId: string) => string;
   confirmAsJoke: (nodeId: string) => string;
@@ -507,6 +509,116 @@ export const useStore = create<JokeForgeState>((setState, getState) => {
         edges: [...state.edges, ...newEdges],
       });
       touch();
+    },
+
+    submitFullJoke: (rawText) => {
+      const state = getState();
+      const text = stripDashes(rawText).trim();
+      if (!text) return "";
+
+      const sentences = splitSentences(text);
+      // The thing the joke is about: lead on the first sentence, but anchor
+      // the label on its strongest keyword so the hub reads cleanly.
+      const lead = sentences[0] ?? text;
+      const kw = keywords(lead, 2).join(", ");
+      const premiseBody = lead;
+
+      // Reuse a pristine root premise if the board has one, otherwise drop a
+      // fresh hub clear of everything so several jokes can share a board.
+      const pristineRoot = state.nodes.find(
+        (n) =>
+          n.kind === "premise" &&
+          n.parentId === null &&
+          n.body.trim().length === 0 &&
+          !state.edges.some((e) => e.source === n.id),
+      );
+
+      let originX = 0;
+      let originY = 0;
+      if (!pristineRoot && state.nodes.length > 0) {
+        originX = Math.max(...state.nodes.map((n) => n.position.x)) + 760;
+      }
+
+      const premise = pristineRoot
+        ? { ...pristineRoot }
+        : makeNode("premise", { position: { x: originX, y: originY } });
+
+      premise.body = premiseBody;
+      premise.title = (kw || premiseBody).slice(0, 60) || "Premise";
+      premise.updatedAt = now();
+      const px = premise.position.x;
+      const py = premise.position.y;
+
+      // The four standard improvement bubbles: three questions plus listing.
+      const { nodes: bubbles } = buildPremiseChildren(premise);
+
+      // Story node holds the full joke verbatim for reference.
+      const story = makeNode("story", {
+        parentId: premise.id,
+        title: "Full joke",
+        body: text,
+        position: { x: px, y: py + 560 },
+        storyElements: {
+          setting: false,
+          theme: false,
+          plot: false,
+          character: false,
+          conflict: false,
+        },
+        journalism: {
+          who: false,
+          what: false,
+          where: false,
+          why: false,
+          when: false,
+          how: false,
+          moral: false,
+        },
+      });
+
+      // Setup beats: every sentence except the last, each individually
+      // taggable. The last sentence becomes the confirmed punchline.
+      const setups = sentences.length > 1 ? sentences.slice(0, -1) : [];
+      const punchText =
+        sentences.length > 0 ? sentences[sentences.length - 1] : text;
+
+      const beatNodes: JokeNode[] = setups.map((s, i) =>
+        makeNode("idea", {
+          parentId: story.id,
+          title: `Setup ${i + 1}`,
+          body: s,
+          position: { x: px + 320, y: py + 480 + i * 130 },
+        }),
+      );
+
+      const punchline = makeNode("joke", {
+        parentId: premise.id,
+        title: punchText.slice(0, 60),
+        body: punchText,
+        confirmed: true,
+        beatSeconds: 20,
+        position: { x: px + 380, y: py - 360 },
+      });
+
+      const newNodes = [...bubbles, story, ...beatNodes, punchline];
+      const newEdges: JokeEdge[] = [
+        ...bubbles.map((b) => ({ id: uid(), source: premise.id, target: b.id })),
+        { id: uid(), source: premise.id, target: story.id },
+        ...beatNodes.map((b) => ({ id: uid(), source: story.id, target: b.id })),
+        { id: uid(), source: premise.id, target: punchline.id },
+      ];
+
+      const baseNodes = pristineRoot
+        ? state.nodes.map((n) => (n.id === premise.id ? premise : n))
+        : [...state.nodes, premise];
+
+      setState({
+        nodes: [...baseNodes, ...newNodes],
+        edges: [...state.edges, ...newEdges],
+        selectedNodeId: premise.id,
+      });
+      touch();
+      return premise.id;
     },
 
     addTag: (parentId, text, tagType) => {
