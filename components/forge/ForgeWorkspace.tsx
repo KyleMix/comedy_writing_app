@@ -3,15 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import type { JokeNode } from "@/lib/types";
-import { forgePromptSequence } from "@/lib/specialize";
-import { aiEnabled, suggestAngles } from "@/lib/ai";
+import { buildJoke, getMove, punchMoves } from "@/lib/craft";
+import { aiEnabled, suggestPunchlines } from "@/lib/ai";
 import { downloadText, jokesToMarkdown } from "@/lib/export";
 import { MonoTextarea } from "../ui";
 
-// The joke-first workspace. One prompt at a time on the left, a running list
-// of captured jokes on the right. Everything you capture is a confirmed joke
-// node on the board, so the Map view and the performance set see it too.
-// This is the front door: get jokes down, above all else.
+// The joke-first workspace. You craft on the left, setup then punch move then
+// punch, and the running list of captured jokes lives on the right. The app
+// does real comedic work on the line: it names the move and scaffolds the
+// punch from your own words, and writes candidate punches when a key is set.
 
 function subtreeJokes(nodes: JokeNode[], rootId: string): JokeNode[] {
   const childrenByParent = new Map<string | null, JokeNode[]>();
@@ -46,58 +46,60 @@ export function ForgeWorkspace() {
   );
 
   const [forgeId, setForgeId] = useState<string | null>(null);
-  const [promptIndex, setPromptIndex] = useState(0);
-  const [draft, setDraft] = useState("");
-  const [sparkItems, setSparkItems] = useState<string[]>([]);
-  const [sparking, setSparking] = useState(false);
-  const [sparkErr, setSparkErr] = useState<string | null>(null);
-
-  // Default the focus to the first premise, and recover if it goes away.
-  useEffect(() => {
-    if (!premises.find((p) => p.id === forgeId)) {
-      setForgeId(premises[0]?.id ?? null);
-      setPromptIndex(0);
-      setDraft("");
-    }
-  }, [premises, forgeId, boardId]);
+  const [setup, setSetup] = useState("");
+  const [moveKey, setMoveKey] = useState("misdirection");
+  const [punch, setPunch] = useState("");
+  const [aiItems, setAiItems] = useState<string[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiErr, setAiErr] = useState<string | null>(null);
 
   const active = premises.find((p) => p.id === forgeId) ?? premises[0] ?? null;
 
-  const prompts = useMemo(
-    () => (active ? forgePromptSequence(active.body) : []),
-    [active],
-  );
-  const current = prompts.length
-    ? prompts[((promptIndex % prompts.length) + prompts.length) % prompts.length]
-    : null;
+  // Focus the first premise, recover if it goes away, and seed the setup from
+  // the premise when the focus changes.
+  useEffect(() => {
+    if (!premises.find((p) => p.id === forgeId)) {
+      const fallback = premises[0]?.id ?? null;
+      setForgeId(fallback);
+    }
+  }, [premises, forgeId, boardId]);
+
+  useEffect(() => {
+    setSetup(active?.body ?? "");
+    setPunch("");
+    setAiItems([]);
+    setAiErr(null);
+  }, [forgeId, active?.body]);
+
+  const moves = useMemo(() => punchMoves(setup), [setup]);
+  const move = useMemo(() => getMove(setup, moveKey), [setup, moveKey]);
 
   const jokes = useMemo(
     () => (active ? subtreeJokes(nodes, active.id) : []),
     [nodes, active],
   );
 
-  function resetSpark() {
-    setSparkItems([]);
-    setSparkErr(null);
-  }
-
   function capture() {
-    if (!active || !draft.trim()) return;
-    addJokeChild(active.id, draft.trim());
-    setDraft("");
+    if (!active || !punch.trim()) return;
+    addJokeChild(active.id, buildJoke(setup, punch));
+    setPunch("");
+    setAiItems([]);
   }
 
-  function nextPrompt(dir: 1 | -1) {
-    setPromptIndex((i) => i + dir);
-    resetSpark();
+  function nextMove() {
+    const i = moves.findIndex((m) => m.key === moveKey);
+    setMoveKey(moves[(i + 1) % moves.length].key);
+    setAiItems([]);
+    setAiErr(null);
   }
 
-  // Rapid fire: capture the line and immediately move to the next prompt.
+  // Rapid fire: capture, keep the setup, and rotate to the next punch move so
+  // you attack the same setup from a fresh angle.
   function captureAndNext() {
-    if (!active || !draft.trim()) return;
-    addJokeChild(active.id, draft.trim());
-    setDraft("");
-    nextPrompt(1);
+    if (!active || !punch.trim()) return;
+    addJokeChild(active.id, buildJoke(setup, punch));
+    setPunch("");
+    nextMove();
   }
 
   function exportJokes() {
@@ -111,29 +113,27 @@ export function ForgeWorkspace() {
     downloadText(`${slug}-jokes.md`, jokesToMarkdown(active.body, ordered));
   }
 
-  async function spark() {
-    if (!active) return;
-    setSparking(true);
-    setSparkErr(null);
+  async function writePunches() {
+    if (!active || !setup.trim()) return;
+    setAiBusy(true);
+    setAiErr(null);
     try {
-      const out = await suggestAngles(settings, {
+      const out = await suggestPunchlines(settings, {
         premise: active.body,
-        questionType: current?.questionType,
+        setup: setup.trim(),
+        technique: move.technique,
       });
-      setSparkItems(out);
+      setAiItems(out);
     } catch (e) {
-      setSparkErr(e instanceof Error ? e.message : "AI request failed.");
+      setAiErr(e instanceof Error ? e.message : "AI request failed.");
     } finally {
-      setSparking(false);
+      setAiBusy(false);
     }
   }
 
   function newPremise() {
     const id = addPremise("");
     setForgeId(id);
-    setPromptIndex(0);
-    setDraft("");
-    resetSpark();
   }
 
   if (!active) {
@@ -148,7 +148,7 @@ export function ForgeWorkspace() {
 
   return (
     <div className="flex-1 flex min-h-0">
-      {/* Left: premise + one prompt at a time. */}
+      {/* Left: premise, then the craft card. */}
       <div className="flex-1 min-w-0 overflow-y-auto panel-scroll">
         <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
           <div className="space-y-2">
@@ -159,12 +159,7 @@ export function ForgeWorkspace() {
               {premises.length > 1 && (
                 <select
                   value={active.id}
-                  onChange={(e) => {
-                    setForgeId(e.target.value);
-                    setPromptIndex(0);
-                    setDraft("");
-                    resetSpark();
-                  }}
+                  onChange={(e) => setForgeId(e.target.value)}
                   className="bg-ink-800 border border-ink-600 rounded px-2 py-1 text-xs text-bone/80 focus:border-hazard focus:outline-none max-w-[260px]"
                 >
                   {premises.map((p) => (
@@ -192,35 +187,74 @@ export function ForgeWorkspace() {
 
           {!hasPremise ? (
             <p className="text-sm text-bone/50">
-              Type a premise above and the prompts start. Then just write jokes.
+              Type a premise above. Then the forge helps you build the setup
+              into an actual punchline.
             </p>
           ) : (
-            current && (
-              <div className="rounded-2xl border border-ink-600 bg-ink-800 overflow-hidden">
-                <div className="px-5 py-4 border-b border-ink-600 bg-ink-900">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono tracking-widest text-hazard">
-                      PROMPT {(promptIndex % prompts.length + prompts.length) % prompts.length + 1} / {prompts.length}
-                    </span>
-                    <div className="flex items-center gap-2 text-xs font-mono text-bone/50">
-                      <button onClick={() => nextPrompt(-1)} className="hover:text-bone">
-                        prev
+            <div className="rounded-2xl border border-ink-600 bg-ink-800 overflow-hidden">
+              {/* Setup */}
+              <div className="px-5 py-4 border-b border-ink-600 bg-ink-900 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono tracking-widest text-hazard">
+                    SETUP, WHAT YOU SAY BEFORE THE LAUGH
+                  </span>
+                  <button
+                    onClick={() => setSetup(active.body)}
+                    className="text-[10px] font-mono text-bone-muted hover:text-bone"
+                    title="Reset the setup to the premise"
+                  >
+                    from premise
+                  </button>
+                </div>
+                <MonoTextarea
+                  value={setup}
+                  onChange={setSetup}
+                  rows={2}
+                  placeholder="The specific line that sets up the laugh."
+                />
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Punch move picker */}
+                <div>
+                  <p className="text-[10px] font-mono tracking-widest text-bone-muted mb-2">
+                    PICK A PUNCH MOVE
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {moves.map((m) => (
+                      <button
+                        key={m.key}
+                        onClick={() => {
+                          setMoveKey(m.key);
+                          setAiItems([]);
+                          setAiErr(null);
+                        }}
+                        className={`text-xs font-mono px-3 py-1.5 rounded-full border transition-colors ${
+                          m.key === moveKey
+                            ? "border-hazard text-hazard bg-hazard/10"
+                            : "border-ink-600 text-bone/60 hover:text-bone hover:border-ink-500"
+                        }`}
+                      >
+                        {m.label}
                       </button>
-                      <button onClick={() => nextPrompt(1)} className="hover:text-bone">
-                        next
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                  <h2 className="mt-1 font-display text-xl text-bone leading-tight">
-                    {current.title}
-                  </h2>
-                  <p className="mt-1 text-sm text-bone/70">{current.text}</p>
                 </div>
 
-                <div className="p-5 space-y-3">
+                {/* The move's craft instruction, scaffolded from the words */}
+                <div className="bg-ink-900 border-l-2 border-hazard rounded-r-lg px-3 py-2.5">
+                  <p className="text-sm text-bone/90">{move.how}</p>
+                  <p className="text-xs text-bone/55 mt-1">{move.scaffold}</p>
+                </div>
+
+                {/* Punch */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono tracking-widest text-hazard">
+                    PUNCH, THE LINE THAT LANDS
+                  </span>
                   <textarea
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    value={punch}
+                    onChange={(e) => setPunch(e.target.value)}
                     onKeyDown={(e) => {
                       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                         e.preventDefault();
@@ -228,56 +262,51 @@ export function ForgeWorkspace() {
                         else capture();
                       }
                     }}
-                    rows={4}
-                    placeholder="Write the joke. Bad ones count. Cmd or Ctrl Enter captures, add Shift to also jump to the next prompt."
+                    rows={3}
+                    placeholder="Write the punch. Cmd or Ctrl Enter captures, add Shift to rotate the move."
                     className="w-full bg-ink-900 border border-ink-600 rounded-lg p-3 text-bone placeholder:text-bone/30 focus:border-hazard focus:outline-none resize-y font-mono text-base"
                   />
                   <div className="flex items-center gap-2">
                     <button
                       onClick={capture}
-                      disabled={!draft.trim()}
+                      disabled={!punch.trim()}
                       className="text-sm font-mono font-semibold px-4 py-2 rounded bg-hazard text-ink-900 hover:bg-hazard/85 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Capture joke
                     </button>
                     <button
                       onClick={captureAndNext}
-                      disabled={!draft.trim()}
+                      disabled={!punch.trim()}
                       className="text-sm font-mono px-4 py-2 rounded border border-hazard text-hazard hover:bg-hazard hover:text-ink-900 disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="Rapid fire: capture and jump to the next prompt"
+                      title="Capture, keep the setup, rotate to the next punch move"
                     >
-                      Capture + next
-                    </button>
-                    <button
-                      onClick={() => nextPrompt(1)}
-                      className="text-sm font-mono px-4 py-2 rounded border border-ink-600 text-bone/70 hover:bg-ink-700"
-                    >
-                      Skip
+                      Capture + next move
                     </button>
                     {aiEnabled(settings) && (
                       <button
-                        onClick={spark}
-                        disabled={sparking}
+                        onClick={writePunches}
+                        disabled={aiBusy || !setup.trim()}
                         className="ml-auto text-xs font-mono px-3 py-2 rounded border border-hazard text-hazard hover:bg-hazard hover:text-ink-900 disabled:opacity-50"
+                        title="Write candidate punchlines for this setup with this move"
                       >
-                        {sparking ? "Thinking..." : "Spark with AI"}
+                        {aiBusy ? "Writing..." : "Write me 5 punches"}
                       </button>
                     )}
                   </div>
-                  {sparkErr && (
+                  {aiErr && (
                     <p className="text-xs text-red-400 font-mono break-words">
-                      {sparkErr}
+                      {aiErr}
                     </p>
                   )}
-                  {sparkItems.length > 0 && (
+                  {aiItems.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[10px] font-mono tracking-widest text-bone-muted">
-                        TAP TO LOAD INTO THE BOX
+                        TAP TO LOAD INTO THE PUNCH BOX, THEN SHARPEN IT
                       </p>
-                      {sparkItems.map((s) => (
+                      {aiItems.map((s) => (
                         <button
                           key={s}
-                          onClick={() => setDraft(s)}
+                          onClick={() => setPunch(s)}
                           className="block w-full text-left text-sm bg-ink-900 border border-ink-600 rounded p-2 text-bone/80 hover:border-hazard"
                         >
                           {s}
@@ -286,8 +315,15 @@ export function ForgeWorkspace() {
                     </div>
                   )}
                 </div>
+
+                {!aiEnabled(settings) && (
+                  <p className="text-[11px] text-bone/40">
+                    Add an Anthropic key in Settings to have the forge write
+                    candidate punches for you. It works without one.
+                  </p>
+                )}
               </div>
-            )
+            </div>
           )}
         </div>
       </div>
@@ -311,8 +347,8 @@ export function ForgeWorkspace() {
         <div className="flex-1 overflow-y-auto panel-scroll p-3 space-y-2">
           {jokes.length === 0 ? (
             <p className="text-sm text-bone/40 px-1">
-              Nothing captured yet. Write a line and hit Capture. Keep them all,
-              even the bad ones. Cut later.
+              Nothing captured yet. Pick a move, write a punch, hit Capture.
+              Keep them all, even the bad ones. Cut later.
             </p>
           ) : (
             jokes.map((j) => <JokeRow key={j.id} node={j} />)

@@ -107,3 +107,21 @@ export async function suggestScenariosAI(
 ): Promise<string[]> {
   return callAnthropic(settings, buildPrompt({ premise, scenario: true }));
 }
+
+// Write candidate punchlines that complete a setup using a named technique.
+// This is the real craft assist: the model produces the line that lands, not
+// a description of an angle.
+export async function suggestPunchlines(
+  settings: Settings,
+  opts: { premise: string; setup: string; technique: string },
+): Promise<string[]> {
+  const prompt = [
+    `Premise: ${opts.premise || "unspecified"}`,
+    `Setup line: ${opts.setup}`,
+    `Technique: ${opts.technique}.`,
+    "Write 5 punchlines that complete this setup using that technique.",
+    "Each must be the line that gets the laugh, not a description of an angle.",
+    "Keep each to one short, punchy line. No setup, just the punch.",
+  ].join("\n");
+  return callAnthropic(settings, prompt);
+}
