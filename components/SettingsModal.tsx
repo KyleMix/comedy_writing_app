@@ -13,6 +13,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const updateSettings = useStore((s) => s.updateSettings);
   const [key, setKey] = useState(settings.anthropicKey);
   const [model, setModel] = useState(settings.anthropicModel);
+  const [googleClientId, setGoogleClientId] = useState(
+    settings.googleClientId,
+  );
 
   return (
     <Modal title="Settings" onClose={onClose}>
@@ -51,12 +54,40 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
+        <div className="border-t border-ink-600 pt-4">
+          <p className="font-display text-lg text-bone">Google Docs</p>
+          <p className="text-sm text-bone/60 mt-1">
+            Optional. Paste a Google OAuth client ID to turn on Save to Google
+            Docs in the Export menu. Saving runs entirely in your browser and
+            only requests the drive.file scope, so the app can touch just the
+            docs it creates.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-mono tracking-widest text-hazard">
+            GOOGLE OAUTH CLIENT ID
+          </label>
+          <input
+            value={googleClientId}
+            onChange={(e) => setGoogleClientId(e.target.value)}
+            placeholder="1234567890-abc.apps.googleusercontent.com"
+            className="w-full mt-1 bg-ink-900 border border-ink-600 rounded-lg px-3 py-2 text-bone placeholder:text-bone/30 focus:border-hazard focus:outline-none font-mono text-sm"
+          />
+          <p className="mt-2 text-[11px] text-bone/40 leading-relaxed">
+            In Google Cloud Console: create an OAuth 2.0 Web client, enable the
+            Google Drive API, and add this app origin (for local use,
+            http://localhost:3000) to the authorized JavaScript origins.
+          </p>
+        </div>
+
         <div className="flex gap-2">
           <ActionButton
             onClick={async () => {
               await updateSettings({
                 anthropicKey: key.trim(),
                 anthropicModel: model.trim() || "claude-opus-4-8",
+                googleClientId: googleClientId.trim(),
               });
               onClose();
             }}

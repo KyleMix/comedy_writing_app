@@ -132,4 +132,5 @@ export interface BoardMeta {
 export interface Settings {
   anthropicKey: string;
   anthropicModel: string;
+  googleClientId: string;
 }

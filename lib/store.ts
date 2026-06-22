@@ -119,7 +119,11 @@ export const useStore = create<JokeForgeState>((setState, getState) => {
     edges: [],
     viewport: { x: 0, y: 0, zoom: 1 },
     boards: [],
-    settings: { anthropicKey: "", anthropicModel: "claude-opus-4-8" },
+    settings: {
+      anthropicKey: "",
+      anthropicModel: "claude-opus-4-8",
+      googleClientId: "",
+    },
     selectedNodeId: null,
 
     hydrate: async () => {

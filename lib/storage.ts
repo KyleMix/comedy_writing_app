@@ -53,12 +53,12 @@ export async function setActiveBoardId(id: string): Promise<void> {
 
 export async function loadSettings(): Promise<Settings> {
   const stored = await get<Settings>(SETTINGS_KEY);
-  return (
-    stored ?? {
-      anthropicKey: "",
-      anthropicModel: "claude-opus-4-8",
-    }
-  );
+  return {
+    anthropicKey: "",
+    anthropicModel: "claude-opus-4-8",
+    googleClientId: "",
+    ...stored,
+  };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {

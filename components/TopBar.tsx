@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import {
+  boardToHtml,
   boardToMarkdown,
   downloadText,
+  setToHtml,
   setToMarkdown,
   setToPlainText,
 } from "@/lib/export";
+import { saveToGoogleDocs } from "@/lib/googleDocs";
 import { BoardPicker } from "./BoardPicker";
 import { SettingsModal } from "./SettingsModal";
 import { SubmitJokeModal } from "./SubmitJokeModal";
@@ -28,6 +31,27 @@ export function TopBar({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [submitOpen, setSubmitOpen] = useState(false);
+  const settings = useStore((s) => s.settings);
+  const [gdocsBusy, setGdocsBusy] = useState(false);
+  const [gdocsError, setGdocsError] = useState<string | null>(null);
+
+  async function saveToDocs(kind: "set" | "board") {
+    setGdocsBusy(true);
+    setGdocsError(null);
+    try {
+      const board = currentBoard();
+      const html = kind === "set" ? setToHtml(board) : boardToHtml(board);
+      const name =
+        kind === "set" ? `${board.name}: the set` : board.name;
+      const doc = await saveToGoogleDocs(settings.googleClientId, name, html);
+      window.open(doc.webViewLink, "_blank", "noopener");
+      setExportOpen(false);
+    } catch (e) {
+      setGdocsError(e instanceof Error ? e.message : "Could not save to Docs.");
+    } finally {
+      setGdocsBusy(false);
+    }
+  }
 
   function currentBoard() {
     return {
@@ -149,6 +173,36 @@ export function TopBar({
                 setExportOpen(false);
               }}
             />
+            {settings.googleClientId.trim() ? (
+              <>
+                <div className="my-1 border-t border-ink-600" />
+                <ExportItem
+                  label={gdocsBusy ? "Saving to Docs..." : "Set to Google Docs"}
+                  onClick={() => saveToDocs("set")}
+                  disabled={gdocsBusy}
+                />
+                <ExportItem
+                  label={
+                    gdocsBusy ? "Saving to Docs..." : "Board to Google Docs"
+                  }
+                  onClick={() => saveToDocs("board")}
+                  disabled={gdocsBusy}
+                />
+                {gdocsError && (
+                  <p className="px-3 py-2 text-[11px] text-red-400 font-mono break-words">
+                    {gdocsError}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="my-1 border-t border-ink-600" />
+                <p className="px-3 py-2 text-[11px] text-bone/40">
+                  Add a Google OAuth client ID in Settings to save to Google
+                  Docs.
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -178,14 +232,17 @@ export function TopBar({
 function ExportItem({
   label,
   onClick,
+  disabled,
 }: {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-3 py-2 text-sm text-bone/80 hover:bg-ink-700 rounded"
+      disabled={disabled}
+      className="w-full text-left px-3 py-2 text-sm text-bone/80 hover:bg-ink-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {label}
     </button>

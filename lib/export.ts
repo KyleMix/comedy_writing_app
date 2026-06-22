@@ -84,6 +84,60 @@ export function setToPlainText(board: Board): string {
   );
 }
 
+function esc(text: string): string {
+  return stripDashes(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// HTML versions for the Google Docs import. Drive converts text/html into a
+// native Doc, so headings and lists carry over as real formatting.
+export function setToHtml(board: Board): string {
+  const beats = board.nodes
+    .filter((n) => n.inSet)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const items = beats
+    .map((beat) => {
+      const marks: string[] = [];
+      if (beat.tagType) marks.push(beat.tagType);
+      if (beat.physical) marks.push("act out");
+      if (beat.callback) marks.push("callback");
+      const suffix = marks.length
+        ? ` <span style="color:#888">(${marks.join(", ")})</span>`
+        : "";
+      return `<li>${esc(beat.body || beat.title)}${suffix}</li>`;
+    })
+    .join("");
+
+  return `<html><body><h1>${esc(board.name)}: the set</h1><ol>${
+    items || "<li>(empty set)</li>"
+  }</ol></body></html>`;
+}
+
+export function boardToHtml(board: Board): string {
+  const childrenOf = (id: string | null) =>
+    board.nodes.filter((n) => n.parentId === id);
+  const roots = board.nodes.filter((n) => n.parentId === null);
+
+  const walk = (node: JokeNode): string => {
+    const tag = KIND_LABEL[node.kind] ?? node.kind;
+    const confirmed = node.confirmed ? " [confirmed]" : "";
+    const kids = childrenOf(node.id);
+    const sub = kids.length
+      ? `<ul>${kids.map(walk).join("")}</ul>`
+      : "";
+    return `<li><strong>${esc(tag)}:</strong> ${esc(
+      node.body || node.title,
+    )}${confirmed}${sub}</li>`;
+  };
+
+  return `<html><body><h1>${esc(board.name)}</h1><ul>${roots
+    .map(walk)
+    .join("")}</ul></body></html>`;
+}
+
 export function downloadText(filename: string, text: string): void {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
