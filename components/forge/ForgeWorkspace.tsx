@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import type { JokeNode } from "@/lib/types";
 import { forgePromptSequence } from "@/lib/specialize";
 import { aiEnabled, suggestAngles } from "@/lib/ai";
+import { downloadText, jokesToMarkdown } from "@/lib/export";
 import { MonoTextarea } from "../ui";
 
 // The joke-first workspace. One prompt at a time on the left, a running list
@@ -89,6 +90,25 @@ export function ForgeWorkspace() {
   function nextPrompt(dir: 1 | -1) {
     setPromptIndex((i) => i + dir);
     resetSpark();
+  }
+
+  // Rapid fire: capture the line and immediately move to the next prompt.
+  function captureAndNext() {
+    if (!active || !draft.trim()) return;
+    addJokeChild(active.id, draft.trim());
+    setDraft("");
+    nextPrompt(1);
+  }
+
+  function exportJokes() {
+    if (!active || jokes.length === 0) return;
+    const ordered = [...jokes].sort((a, b) => a.createdAt - b.createdAt);
+    const slug =
+      (active.body.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "jokes").slice(
+        0,
+        40,
+      );
+    downloadText(`${slug}-jokes.md`, jokesToMarkdown(active.body, ordered));
   }
 
   async function spark() {
@@ -204,11 +224,12 @@ export function ForgeWorkspace() {
                     onKeyDown={(e) => {
                       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                         e.preventDefault();
-                        capture();
+                        if (e.shiftKey) captureAndNext();
+                        else capture();
                       }
                     }}
                     rows={4}
-                    placeholder="Write the joke. Bad ones count. Cmd or Ctrl Enter to capture."
+                    placeholder="Write the joke. Bad ones count. Cmd or Ctrl Enter captures, add Shift to also jump to the next prompt."
                     className="w-full bg-ink-900 border border-ink-600 rounded-lg p-3 text-bone placeholder:text-bone/30 focus:border-hazard focus:outline-none resize-y font-mono text-base"
                   />
                   <div className="flex items-center gap-2">
@@ -220,10 +241,18 @@ export function ForgeWorkspace() {
                       Capture joke
                     </button>
                     <button
+                      onClick={captureAndNext}
+                      disabled={!draft.trim()}
+                      className="text-sm font-mono px-4 py-2 rounded border border-hazard text-hazard hover:bg-hazard hover:text-ink-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Rapid fire: capture and jump to the next prompt"
+                    >
+                      Capture + next
+                    </button>
+                    <button
                       onClick={() => nextPrompt(1)}
                       className="text-sm font-mono px-4 py-2 rounded border border-ink-600 text-bone/70 hover:bg-ink-700"
                     >
-                      Next prompt
+                      Skip
                     </button>
                     {aiEnabled(settings) && (
                       <button
@@ -266,8 +295,18 @@ export function ForgeWorkspace() {
       {/* Right: the output. Every captured joke, the whole point. */}
       <aside className="w-[380px] shrink-0 border-l border-ink-600 bg-ink-800 flex flex-col min-h-0">
         <div className="px-4 py-3 border-b border-ink-600 flex items-center justify-between">
-          <h2 className="font-display text-lg text-bone">Jokes</h2>
-          <span className="font-mono text-hazard text-sm">{jokes.length}</span>
+          <div className="flex items-baseline gap-2">
+            <h2 className="font-display text-lg text-bone">Jokes</h2>
+            <span className="font-mono text-hazard text-sm">{jokes.length}</span>
+          </div>
+          <button
+            onClick={exportJokes}
+            disabled={jokes.length === 0}
+            className="text-xs font-mono px-2.5 py-1 rounded border border-ink-600 text-bone/70 hover:bg-ink-700 hover:border-ink-500 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Download these jokes as Markdown"
+          >
+            export
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto panel-scroll p-3 space-y-2">
           {jokes.length === 0 ? (

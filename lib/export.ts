@@ -138,6 +138,17 @@ export function boardToHtml(board: Board): string {
     .join("")}</ul></body></html>`;
 }
 
+// Just the captured jokes for one premise, in writing order, as a flat list.
+// This is the Forge level export: the output, nothing else.
+export function jokesToMarkdown(title: string, jokes: JokeNode[]): string {
+  const lines: string[] = [`# Jokes: ${stripDashes(title || "Untitled premise")}`, ""];
+  jokes.forEach((j, i) => {
+    const mark = j.tagType ? ` (${j.tagType})` : "";
+    lines.push(`${i + 1}. ${stripDashes(j.body || j.title)}${mark}`);
+  });
+  return lines.join("\n") + "\n";
+}
+
 export function downloadText(filename: string, text: string): void {
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
