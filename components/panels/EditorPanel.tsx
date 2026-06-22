@@ -10,12 +10,14 @@ import {
   ANALOGY_GOLDEN_RULE,
   ANALOGY_WORKED_EXAMPLE,
   CLICHE_HELP,
+  GO_WEIRDER_HELP,
   getQuestionSpec,
   JOURNALISM_LABELS,
   LISTING_CATEGORIES,
   LISTING_HINT,
   STORY_ELEMENTS_LABELS,
   STORY_HELP,
+  TAG_PASS_HELP,
 } from "@/lib/methodology";
 import { ActionButton, Checkbox, MonoTextarea, TextInput } from "../ui";
 import { AiSuggest } from "./AiSuggest";
@@ -523,6 +525,12 @@ function StoryEditor({ node }: { node: JokeNode }) {
 
 function SimpleEditor({ node }: { node: JokeNode }) {
   const updateNode = useStore((s) => s.updateNode);
+  const tagLabel =
+    node.tagType === "tag"
+      ? "TAG"
+      : node.tagType === "topper"
+        ? "TOPPER"
+        : null;
   return (
     <div className="space-y-3">
       <p className="text-sm text-bone/60">
@@ -530,11 +538,126 @@ function SimpleEditor({ node }: { node: JokeNode }) {
           ? "A confirmed beat. Edit the line, include it in the set, or branch it into its own premise."
           : "An idea bubble. Refine it, branch it, or confirm it into a joke."}
       </p>
+      {tagLabel && (
+        <span className="inline-block text-[10px] font-mono tracking-widest text-hazard border border-hazard rounded px-1.5 py-0.5">
+          {tagLabel}
+        </span>
+      )}
       <MonoTextarea
         value={node.body}
         onChange={(v) => updateNode(node.id, { body: v })}
         rows={4}
       />
+
+      <div className="flex flex-wrap gap-2">
+        <Toggle
+          active={Boolean(node.physical)}
+          onClick={() => updateNode(node.id, { physical: !node.physical })}
+          label="Act it out"
+          title="Mark this beat as physical. Showing it beats telling it for laughs per minute."
+        />
+        <Toggle
+          active={Boolean(node.callback)}
+          onClick={() => updateNode(node.id, { callback: !node.callback })}
+          label="Callback"
+          title="Mark this as a recurring image to pay off later. The set builder surfaces callbacks so the setup lands before the payoff."
+        />
+      </div>
+
+      {node.kind === "joke" && <TagPass node={node} />}
+    </div>
+  );
+}
+
+function Toggle({
+  active,
+  onClick,
+  label,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  title?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`text-[11px] font-mono px-2.5 py-1 rounded border transition-colors ${
+        active
+          ? "border-hazard text-hazard bg-hazard/10"
+          : "border-ink-500 text-bone/50 hover:text-bone/80"
+      }`}
+    >
+      {active ? "✓ " : ""}
+      {label}
+    </button>
+  );
+}
+
+// The Tag pass: the highest leverage laughs per minute move. A tag is a
+// second punch on the same setup. A topper punches the punchline. Each
+// lands as a confirmed joke child that flows straight into the set.
+function TagPass({ node }: { node: JokeNode }) {
+  const addTag = useStore((s) => s.addTag);
+  const [tag, setTag] = useState("");
+  const [topper, setTopper] = useState("");
+
+  return (
+    <div className="mt-2 border-t border-ink-600 pt-3 space-y-3">
+      <div>
+        <h3 className="font-display text-lg text-bone leading-tight">
+          Tag pass
+        </h3>
+        <p className="mt-1 text-xs text-bone/60">{TAG_PASS_HELP}</p>
+      </div>
+      <div>
+        <label className="text-[10px] font-mono tracking-widest text-hazard">
+          TAG, SECOND PUNCH ON THE SETUP
+        </label>
+        <div className="flex gap-2 mt-1">
+          <TextInput
+            value={tag}
+            onChange={setTag}
+            onEnter={() => {
+              if (addTag(node.id, tag, "tag")) setTag("");
+            }}
+            placeholder="Another angle on the same premise."
+          />
+          <ActionButton
+            onClick={() => {
+              if (addTag(node.id, tag, "tag")) setTag("");
+            }}
+            variant="accent"
+          >
+            +
+          </ActionButton>
+        </div>
+      </div>
+      <div>
+        <label className="text-[10px] font-mono tracking-widest text-hazard">
+          TOPPER, PUNCH ON THE PUNCHLINE
+        </label>
+        <div className="flex gap-2 mt-1">
+          <TextInput
+            value={topper}
+            onChange={setTopper}
+            onEnter={() => {
+              if (addTag(node.id, topper, "topper")) setTopper("");
+            }}
+            placeholder="Top the laugh you just got."
+          />
+          <ActionButton
+            onClick={() => {
+              if (addTag(node.id, topper, "topper")) setTopper("");
+            }}
+            variant="accent"
+          >
+            +
+          </ActionButton>
+        </div>
+      </div>
     </div>
   );
 }
@@ -544,6 +667,7 @@ function CommonActions({ node }: { node: JokeNode }) {
   const addAnalogyTo = useStore((s) => s.addAnalogyTo);
   const addClicheTo = useStore((s) => s.addClicheTo);
   const addStoryTo = useStore((s) => s.addStoryTo);
+  const spawnFallbackQuestions = useStore((s) => s.spawnFallbackQuestions);
   const confirmAsJoke = useStore((s) => s.confirmAsJoke);
   const toggleInSet = useStore((s) => s.toggleInSet);
 
@@ -562,6 +686,15 @@ function CommonActions({ node }: { node: JokeNode }) {
       {node.kind === "premise" && (
         <ActionButton onClick={() => addStoryTo(node.id)}>
           Add story
+        </ActionButton>
+      )}
+      {node.kind === "premise" && (
+        <ActionButton
+          onClick={() => spawnFallbackQuestions(node.id)}
+          variant="accent"
+          title={GO_WEIRDER_HELP}
+        >
+          Go weirder
         </ActionButton>
       )}
       {canConfirmHere && (

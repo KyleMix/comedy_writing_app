@@ -46,9 +46,126 @@ export const THREE_QUESTIONS: QuestionSpec[] = [
   },
 ];
 
+// The fallback questions interrogate the premise itself, not a single
+// sentence. Where the three core questions are convergent (is there an X on
+// this line), these are divergent: they push off the premise into angles
+// that are not on the page yet. Each is built to break the obvious first
+// answer, and every answer can be promoted into its own premise. That loop
+// is the brain movement that finds the weirder, less obvious joke.
+export const FALLBACK_QUESTIONS: QuestionSpec[] = [
+  {
+    type: "literal",
+    order: 1,
+    label: "Take it literally",
+    title: "Make the figure of speech literally true",
+    question:
+      "Find the figurative phrase in the premise and build the world where it is physically, stupidly true. Live in that world for a beat.",
+    example:
+      "Impossible to reach. She bought a house at an altitude where my phone gives up. I get one bar and a nosebleed.",
+  },
+  {
+    type: "escalate",
+    order: 2,
+    label: "Escalate it",
+    title: "Escalate it. And then what is worse",
+    question:
+      "Take your answer and ask, and then what is even worse. Do it three times. Each beat must top the one before. You are building a run of laughs off one setup, not a single joke.",
+    example:
+      "She is impossible to reach. So I called. Then I texted. Then I drove over. Then I realized I have not had her number since 2019 and I have been doing this to a stranger.",
+  },
+  {
+    type: "worst_person",
+    order: 3,
+    label: "Worst person",
+    title: "Who is the worst person to be inside this",
+    question:
+      "Who is the worst, weirdest, or least qualified person to be stuck in this premise. Put them there and let it play.",
+    example:
+      "A professional hostage negotiator who still cannot get his ex to pick up the phone.",
+  },
+  {
+    type: "hidden_shame",
+    order: 4,
+    label: "Hidden shame",
+    title: "What is the premise secretly admitting",
+    question:
+      "What is this premise embarrassed about. What does it quietly confess about you. Aim the joke back at the narrator.",
+    example:
+      "Impossible to reach admits one thing: I am still the one trying.",
+  },
+  {
+    type: "reverse_power",
+    order: 5,
+    label: "Reverse power",
+    title: "Flip who has the power",
+    question:
+      "Who holds the power in this premise. Flip it completely and describe the new arrangement.",
+    example:
+      "She is unreachable because I am the one being screened now, by a system, like a customer on hold with my own ex.",
+  },
+  {
+    type: "wrong_frame",
+    order: 6,
+    label: "Wrong frame",
+    title: "Describe it in the wrong vocabulary",
+    question:
+      "Narrate this premise in the language of a totally unrelated field: nature documentary, tech support, war, sports, religion.",
+    example:
+      "My ex has gone fully off grid. Experts believe she is migrating.",
+  },
+  {
+    type: "alien_dog",
+    order: 7,
+    label: "Alien or dog",
+    title: "Read it with no human context",
+    question:
+      "How would a being with no human context read this exact situation: an alien, a dog, a toddler, a Victorian. Strip it to the absurd mechanics.",
+    example:
+      "A dog watching me redial: this man keeps yelling into a brick and getting sad.",
+  },
+  {
+    type: "emotional_xray",
+    order: 8,
+    label: "Emotional X-ray",
+    title: "What do you irrationally feel about this",
+    question:
+      "Name the feeling under the premise, the one that is out of proportion. State it like it is a reasonable universal law. The take is the joke. The words just deliver it.",
+    example:
+      "It should be a federal crime to change your number without telling the people who are not over it yet.",
+  },
+  {
+    type: "assumption_stack",
+    order: 9,
+    label: "Assumption stack",
+    title: "List the assumptions, snap the safest one",
+    question:
+      "List three things the audience assumes are normal in this premise. Then break the one nobody would think to question.",
+    example:
+      "We assume I want to reach her, that she has a phone, that we broke up. Snap the last one: we never dated, I just will not let it go.",
+  },
+  {
+    type: "own_fault",
+    order: 10,
+    label: "Make it your fault",
+    title: "Rewrite it so you are the problem",
+    question:
+      "Rewrite the premise so the narrator is the actual problem. Self incrimination raises the stakes and your likability at once.",
+    example:
+      "She is impossible to reach in the way a restraining order makes someone impossible to reach.",
+  },
+];
+
+const ALL_QUESTIONS: QuestionSpec[] = [...THREE_QUESTIONS, ...FALLBACK_QUESTIONS];
+
 export function getQuestionSpec(type: QuestionType): QuestionSpec {
-  return THREE_QUESTIONS.find((q) => q.type === type) ?? THREE_QUESTIONS[0];
+  return ALL_QUESTIONS.find((q) => q.type === type) ?? THREE_QUESTIONS[0];
 }
+
+export const GO_WEIRDER_HELP =
+  "The three questions find the obvious joke on a line. These push off the premise into angles that are not on the page yet. Answer one, then promote the answer into its own premise to keep the brain moving.";
+
+export const TAG_PASS_HELP =
+  "The fastest way to raise laughs per minute is to get more punches on a setup you already paid for. A tag is a second punch on the same setup. A topper punches the punchline itself. Write the obvious one, then reach for one more.";
 
 export const LISTING_CATEGORIES: ListingCategory[] = [
   "People",

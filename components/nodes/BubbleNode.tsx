@@ -99,6 +99,25 @@ export function BubbleNode({ data }: NodeProps) {
           </span>
         </div>
       )}
+      {(node.tagType || node.physical || node.callback) && (
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] font-mono">
+          {node.tagType && (
+            <span className="px-1.5 py-0.5 rounded border border-hazard text-hazard">
+              {node.tagType.toUpperCase()}
+            </span>
+          )}
+          {node.physical && (
+            <span className="px-1.5 py-0.5 rounded border border-bone/40 text-bone/60">
+              ACT OUT
+            </span>
+          )}
+          {node.callback && (
+            <span className="px-1.5 py-0.5 rounded border border-bone/40 text-bone/60">
+              CALLBACK
+            </span>
+          )}
+        </div>
+      )}
       <Handle type="source" position={Position.Bottom} isConnectable={false} />
     </motion.div>
   );

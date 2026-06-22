@@ -28,6 +28,7 @@ import {
   saveSettings,
   setActiveBoardId,
 } from "./storage";
+import { FALLBACK_QUESTIONS } from "./methodology";
 
 interface JokeForgeState {
   hydrated: boolean;
@@ -69,6 +70,8 @@ interface JokeForgeState {
   addAnalogyTo: (parentId: string) => string;
   addClicheTo: (parentId: string) => string;
   addStoryTo: (parentId: string) => string;
+  spawnFallbackQuestions: (premiseId: string) => void;
+  addTag: (parentId: string, text: string, tagType: "tag" | "topper") => string;
   promoteToPremise: (nodeId: string) => string;
   confirmAsJoke: (nodeId: string) => string;
   toggleInSet: (nodeId: string) => void;
@@ -457,6 +460,79 @@ export const useStore = create<JokeForgeState>((setState, getState) => {
         nodes: [...state.nodes, node],
         edges: [...state.edges, edge],
         selectedNodeId: node.id,
+      });
+      touch();
+      return node.id;
+    },
+
+    spawnFallbackQuestions: (premiseId) => {
+      const state = getState();
+      const premise = state.nodes.find((n) => n.id === premiseId);
+      if (!premise) return;
+
+      // Do not spawn twice. Skip any fallback types already present as
+      // children of this premise.
+      const existing = new Set(
+        state.nodes
+          .filter((n) => n.parentId === premiseId && n.questionType)
+          .map((n) => n.questionType),
+      );
+      const pending = FALLBACK_QUESTIONS.filter((q) => !existing.has(q.type));
+      if (pending.length === 0) return;
+
+      // Lay them in an outer ring so they do not crowd the core four. Rotate
+      // the start angle to interleave with the inner ring.
+      const positions = radialPositions(
+        premise.position,
+        pending.length,
+        560,
+        -Math.PI / 2 + Math.PI / pending.length,
+      );
+      const newNodes: JokeNode[] = pending.map((q, i) =>
+        makeNode("question", {
+          parentId: premiseId,
+          questionType: q.type,
+          title: q.label,
+          body: "",
+          position: positions[i],
+        }),
+      );
+      const newEdges: JokeEdge[] = newNodes.map((n) => ({
+        id: uid(),
+        source: premiseId,
+        target: n.id,
+      }));
+      setState({
+        nodes: [...state.nodes, ...newNodes],
+        edges: [...state.edges, ...newEdges],
+      });
+      touch();
+    },
+
+    addTag: (parentId, text, tagType) => {
+      const state = getState();
+      const parent = state.nodes.find((n) => n.id === parentId);
+      if (!parent) return "";
+      const clean = stripDashes(text);
+      if (!clean.trim()) return "";
+      // Tags and toppers are punches, so they land as confirmed joke nodes
+      // that flow straight into the set as extra laughs per minute.
+      const siblings = state.edges.filter((e) => e.source === parentId).length;
+      const positions = radialPositions(parent.position, 6, 220);
+      const pos = positions[siblings % positions.length];
+      const node = makeNode("joke", {
+        parentId,
+        title: clean.slice(0, 60),
+        body: clean,
+        confirmed: true,
+        tagType,
+        beatSeconds: 8,
+        position: pos,
+      });
+      const edge: JokeEdge = { id: uid(), source: parentId, target: node.id };
+      setState({
+        nodes: [...state.nodes, node],
+        edges: [...state.edges, edge],
       });
       touch();
       return node.id;

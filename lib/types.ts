@@ -8,10 +8,28 @@ export type NodeKind =
   | "cliche" // cliche reformation with running list
   | "joke"; // confirmed tag or punchline
 
-export type QuestionType =
+// The three core questions, asked of a sentence (convergent discovery).
+export type CoreQuestionType =
   | "double_entendre"
   | "converging"
   | "shatter_assumption";
+
+// The fallback questions, asked of the premise itself (divergent, weirder
+// angles). Each answer can be promoted back into a premise, which is the
+// recursion that drives brain movement.
+export type FallbackQuestionType =
+  | "literal"
+  | "escalate"
+  | "worst_person"
+  | "hidden_shame"
+  | "reverse_power"
+  | "wrong_frame"
+  | "alien_dog"
+  | "emotional_xray"
+  | "assumption_stack"
+  | "own_fault";
+
+export type QuestionType = CoreQuestionType | FallbackQuestionType;
 
 export type ListingCategory =
   | "People"
@@ -69,6 +87,11 @@ export interface JokeNode {
   inSet?: boolean; // included in performance set
   order?: number; // position in the performance set
   beatSeconds?: number; // estimated time for this beat in the set
+
+  // density and recall multipliers
+  tagType?: "tag" | "topper"; // a tag is a second punch on the setup, a topper punches the punchline
+  physical?: boolean; // act it out instead of telling it
+  callback?: boolean; // a recurring image to pay off later
 
   // recall drill tracking
   recallMisses?: number;

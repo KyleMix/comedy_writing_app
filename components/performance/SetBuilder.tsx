@@ -36,6 +36,14 @@ export function SetBuilder() {
   const minutes = totalSeconds / 60;
   const lpm = minutes > 0 ? (inSet.length / minutes).toFixed(1) : "0.0";
 
+  const callbacks = useMemo(
+    () =>
+      inSet
+        .map((n, i) => ({ ...n, pos: i + 1 }))
+        .filter((n) => n.callback),
+    [inSet],
+  );
+
   function reorder(node: JokeNode, dir: -1 | 1) {
     const idx = inSet.findIndex((n) => n.id === node.id);
     const swapIdx = idx + dir;
@@ -63,6 +71,30 @@ export function SetBuilder() {
           </div>
         </div>
 
+        {callbacks.length > 0 && (
+          <div className="mb-3 bg-ink-900 border border-ink-600 rounded-lg p-3">
+            <p className="text-[10px] font-mono tracking-widest text-hazard mb-1">
+              CALLBACKS IN THIS SET
+            </p>
+            <p className="text-[11px] text-bone/50 mb-2">
+              Free laughs, as long as the image is planted earlier than its
+              payoff. Place these where the audience already knows the
+              reference.
+            </p>
+            <ul className="space-y-1">
+              {callbacks.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center gap-2 text-xs font-mono text-bone/70"
+                >
+                  <span className="text-hazard">#{c.pos}</span>
+                  <span className="truncate">{c.body || c.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {inSet.length === 0 ? (
           <p className="text-sm text-bone/50">
             Nothing in the set yet. Add confirmed jokes or ideas from the
@@ -79,9 +111,30 @@ export function SetBuilder() {
                   <span className="font-mono text-hazard text-sm w-6 shrink-0">
                     {i + 1}.
                   </span>
-                  <p className="flex-1 font-mono text-sm text-bone/90">
-                    {n.body || n.title}
-                  </p>
+                  <div className="flex-1">
+                    <p className="font-mono text-sm text-bone/90">
+                      {n.body || n.title}
+                    </p>
+                    {(n.tagType || n.physical || n.callback) && (
+                      <div className="mt-1 flex flex-wrap gap-1.5 text-[9px] font-mono">
+                        {n.tagType && (
+                          <span className="px-1.5 py-0.5 rounded border border-hazard text-hazard">
+                            {n.tagType.toUpperCase()}
+                          </span>
+                        )}
+                        {n.physical && (
+                          <span className="px-1.5 py-0.5 rounded border border-bone/40 text-bone/60">
+                            ACT OUT
+                          </span>
+                        )}
+                        {n.callback && (
+                          <span className="px-1.5 py-0.5 rounded border border-bone/40 text-bone/60">
+                            CALLBACK
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between mt-2 pl-8">
                   <div className="flex items-center gap-2">

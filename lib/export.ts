@@ -64,7 +64,12 @@ export function setToMarkdown(board: Board): string {
   lines.push(`# ${board.name}: the set`);
   lines.push("");
   beats.forEach((beat, i) => {
-    lines.push(`${i + 1}. ${stripDashes(beat.body || beat.title)}`);
+    const marks: string[] = [];
+    if (beat.tagType) marks.push(beat.tagType);
+    if (beat.physical) marks.push("act out");
+    if (beat.callback) marks.push("callback");
+    const suffix = marks.length ? ` (${marks.join(", ")})` : "";
+    lines.push(`${i + 1}. ${stripDashes(beat.body || beat.title)}${suffix}`);
   });
   lines.push("");
   return lines.join("\n") + "\n";
