@@ -74,6 +74,7 @@ interface JokeForgeState {
   spawnFallbackQuestions: (premiseId: string) => void;
   submitFullJoke: (text: string) => string;
   addTag: (parentId: string, text: string, tagType: "tag" | "topper") => string;
+  addJokeChild: (parentId: string, text: string) => string;
   promoteToPremise: (nodeId: string) => string;
   confirmAsJoke: (nodeId: string) => string;
   toggleInSet: (nodeId: string) => void;
@@ -643,6 +644,32 @@ export const useStore = create<JokeForgeState>((setState, getState) => {
         confirmed: true,
         tagType,
         beatSeconds: 8,
+        position: pos,
+      });
+      const edge: JokeEdge = { id: uid(), source: parentId, target: node.id };
+      setState({
+        nodes: [...state.nodes, node],
+        edges: [...state.edges, edge],
+      });
+      touch();
+      return node.id;
+    },
+
+    addJokeChild: (parentId, text) => {
+      const state = getState();
+      const parent = state.nodes.find((n) => n.id === parentId);
+      if (!parent) return "";
+      const clean = stripDashes(text);
+      if (!clean.trim()) return "";
+      const siblings = state.edges.filter((e) => e.source === parentId).length;
+      const positions = radialPositions(parent.position, 6, 240);
+      const pos = positions[siblings % positions.length];
+      const node = makeNode("joke", {
+        parentId,
+        title: clean.slice(0, 60),
+        body: clean,
+        confirmed: true,
+        beatSeconds: 20,
         position: pos,
       });
       const edge: JokeEdge = { id: uid(), source: parentId, target: node.id };

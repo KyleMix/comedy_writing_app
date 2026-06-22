@@ -24,6 +24,7 @@ import { specializeQuestion } from "@/lib/specialize";
 import { ActionButton, Checkbox, MonoTextarea, TextInput } from "../ui";
 import { AiSuggest } from "./AiSuggest";
 import { ScenarioSuggest } from "./ScenarioSuggest";
+import { PremiseLadder } from "./PremiseLadder";
 
 function findPremiseText(nodes: JokeNode[], node: JokeNode): string {
   let current: JokeNode | undefined = node;
@@ -148,6 +149,7 @@ function PremiseEditor({ node }: { node: JokeNode }) {
           rows={3}
         />
       </div>
+      <PremiseLadder node={node} />
       <ScenarioSuggest parentId={node.id} premise={node.body} />
     </div>
   );

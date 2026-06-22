@@ -8,6 +8,77 @@ import {
   subjectIsPerson,
 } from "./textAnalysis";
 
+// Which engines fit this exact premise, recommended in order of fit. Used by
+// the guided ladder so the comedian picks from two or three techniques the
+// text actually supports instead of all of them.
+export interface TechRec {
+  action: "question" | "analogy";
+  questionType?: QuestionType;
+  label: string;
+  reason: string;
+}
+
+export function recommendTechniques(premise: string): TechRec[] {
+  const text = premise.trim();
+  if (!text) return [];
+  const recs: TechRec[] = [];
+
+  const p = pivotWord(text);
+  if (p?.meanings) {
+    recs.push({
+      action: "question",
+      questionType: "double_entendre",
+      label: "Double entendre",
+      reason: `"${p.word}" has more than one meaning to swing to`,
+    });
+  }
+
+  const pair = convergingPair(text);
+  if (pair) {
+    recs.push({
+      action: "question",
+      questionType: "converging",
+      label: "Converging ideas",
+      reason: `"${pair[0]}" and "${pair[1]}" can be smashed together`,
+    });
+  }
+
+  if (subjectIsPerson(text)) {
+    recs.push({
+      action: "analogy",
+      label: "Forced analogy",
+      reason: "your subject is a person, an antagonistic analogy has edge",
+    });
+  }
+
+  // A reliable default that works on almost any premise.
+  recs.push({
+    action: "question",
+    questionType: "shatter_assumption",
+    label: "Shatter assumption",
+    reason: "works on almost any premise",
+  });
+
+  if (p && !p.meanings) {
+    recs.push({
+      action: "question",
+      questionType: "double_entendre",
+      label: "Double entendre",
+      reason: `test "${p.word}" for a slang use or a homophone`,
+    });
+  }
+
+  const seen = new Set<string>();
+  const out: TechRec[] = [];
+  for (const r of recs) {
+    if (seen.has(r.label)) continue;
+    seen.add(r.label);
+    out.push(r);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
+
 // Turn a generic guiding question into one that names the words the comedian
 // actually entered. Offline and deterministic. When the premise is empty we
 // fall back to the canonical methodology copy untouched.
