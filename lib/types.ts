@@ -58,6 +58,17 @@ export interface JournalismBasics {
   moral: boolean;
 }
 
+// Progress through the guided "shape this premise" ladder.
+export interface LadderState {
+  step: number;
+  attitude: string;
+  assumption: string;
+  breakIt: string;
+  punch: string;
+  tag: string;
+  lockedJokeId: string | null;
+}
+
 export interface JokeNode {
   id: string;
   kind: NodeKind;
@@ -95,6 +106,9 @@ export interface JokeNode {
 
   // recall drill tracking
   recallMisses?: number;
+
+  // guided ladder progress, persisted so the flow survives clicking away
+  ladder?: LadderState;
 
   createdAt: number;
   updatedAt: number;

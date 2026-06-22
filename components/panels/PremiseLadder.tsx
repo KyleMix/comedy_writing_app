@@ -1,35 +1,54 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useStore } from "@/lib/store";
-import type { JokeNode, QuestionType } from "@/lib/types";
+import type { JokeNode, LadderState, QuestionType } from "@/lib/types";
 import { recommendTechniques, specializeQuestion } from "@/lib/specialize";
+import { stripDashes } from "@/lib/utils";
 import { ActionButton, MonoTextarea, TextInput } from "../ui";
 
 // A guided ladder that shapes a premise into a punch, one move at a time:
 // lock the attitude, name and break the assumption, pick a fitting engine,
-// then draft and tag the punch. Each step writes real bubbles to the board,
-// so the graph model is unchanged. This is a directive front door, not a new
-// engine.
+// then draft and tag the punch. Progress is stored on the premise node, so
+// the flow survives clicking away and a refresh. Each step writes real
+// bubbles to the board, so the graph model is unchanged.
 
 const STEPS = ["Attitude", "Assumption", "Engine", "Punch"];
+
+const EMPTY_LADDER: LadderState = {
+  step: 0,
+  attitude: "",
+  assumption: "",
+  breakIt: "",
+  punch: "",
+  tag: "",
+  lockedJokeId: null,
+};
 
 export function PremiseLadder({ node }: { node: JokeNode }) {
   const premise = node.body;
   const nodes = useStore((s) => s.nodes);
+  const updateNode = useStore((s) => s.updateNode);
   const addIdeaChild = useStore((s) => s.addIdeaChild);
   const addAnalogyTo = useStore((s) => s.addAnalogyTo);
   const addJokeChild = useStore((s) => s.addJokeChild);
   const addTag = useStore((s) => s.addTag);
   const selectNode = useStore((s) => s.selectNode);
 
-  const [step, setStep] = useState(0);
-  const [attitude, setAttitude] = useState("");
-  const [assumption, setAssumption] = useState("");
-  const [breakIt, setBreakIt] = useState("");
-  const [punch, setPunch] = useState("");
-  const [tag, setTag] = useState("");
-  const [lockedJokeId, setLockedJokeId] = useState<string | null>(null);
+  const ladder = node.ladder ?? EMPTY_LADDER;
+  const { step, attitude, assumption, breakIt, punch, tag, lockedJokeId } =
+    ladder;
+
+  // Write straight to the node so progress persists. Strip dashes on the way
+  // in to keep stored drafts on brand.
+  function patch(p: Partial<LadderState>) {
+    const cleaned: Partial<LadderState> = { ...p };
+    for (const k of ["attitude", "assumption", "breakIt", "punch", "tag"] as const) {
+      const v = cleaned[k];
+      if (typeof v === "string") cleaned[k] = stripDashes(v);
+    }
+    updateNode(node.id, { ladder: { ...ladder, ...cleaned } });
+  }
 
   const attitudePrompt = useMemo(
     () => specializeQuestion("emotional_xray", premise).specific,
@@ -43,15 +62,14 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
 
   if (!premise.trim()) return null;
 
-  const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const back = () => setStep((s) => Math.max(s - 1, 0));
+  const goto = (i: number) =>
+    patch({ step: Math.max(0, Math.min(i, STEPS.length - 1)) });
+  const next = () => goto(step + 1);
+  const back = () => goto(step - 1);
 
   function commitAttitude() {
-    if (attitude.trim()) {
-      addIdeaChild(node.id, attitude.trim());
-      setAttitude("");
-    }
-    next();
+    if (attitude.trim()) addIdeaChild(node.id, attitude.trim());
+    patch({ attitude: "", step: 1 });
   }
 
   function commitAssumption() {
@@ -60,10 +78,8 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
     if (a || b) {
       const text = a && b ? `They assume ${a}. But ${b}.` : a || b;
       addIdeaChild(node.id, text);
-      setAssumption("");
-      setBreakIt("");
     }
-    next();
+    patch({ assumption: "", breakIt: "", step: 2 });
   }
 
   function applyRec(rec: (typeof recs)[number]) {
@@ -83,14 +99,13 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
   function lockPunch() {
     if (!punch.trim()) return;
     const id = addJokeChild(node.id, punch.trim());
-    setLockedJokeId(id || null);
-    setPunch("");
+    patch({ punch: "", lockedJokeId: id || null });
   }
 
   function commitTag() {
     if (lockedJokeId && tag.trim()) {
       addTag(lockedJokeId, tag.trim(), "tag");
-      setTag("");
+      patch({ tag: "" });
     }
   }
 
@@ -109,7 +124,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
           {STEPS.map((label, i) => (
             <button
               key={label}
-              onClick={() => setStep(i)}
+              onClick={() => goto(i)}
               className="flex-1"
               title={label}
             >
@@ -135,7 +150,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
             </p>
             <MonoTextarea
               value={attitude}
-              onChange={setAttitude}
+              onChange={(v) => patch({ attitude: v })}
               rows={2}
               placeholder="It should be illegal to..."
             />
@@ -158,7 +173,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
               </label>
               <TextInput
                 value={assumption}
-                onChange={setAssumption}
+                onChange={(v) => patch({ assumption: v })}
                 placeholder="The normal, boring reading."
               />
             </div>
@@ -168,7 +183,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
               </label>
               <TextInput
                 value={breakIt}
-                onChange={setBreakIt}
+                onChange={(v) => patch({ breakIt: v })}
                 placeholder="The snap that breaks it."
               />
             </div>
@@ -213,7 +228,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
               <>
                 <MonoTextarea
                   value={punch}
-                  onChange={setPunch}
+                  onChange={(v) => patch({ punch: v })}
                   rows={3}
                   placeholder="Write the line."
                 />
@@ -237,7 +252,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
                 <div className="flex gap-2">
                   <TextInput
                     value={tag}
-                    onChange={setTag}
+                    onChange={(v) => patch({ tag: v })}
                     onEnter={commitTag}
                     placeholder="Another angle on the same setup."
                   />
@@ -245,12 +260,7 @@ export function PremiseLadder({ node }: { node: JokeNode }) {
                     Add tag
                   </ActionButton>
                 </div>
-                <ActionButton
-                  onClick={() => {
-                    setLockedJokeId(null);
-                    setStep(0);
-                  }}
-                >
+                <ActionButton onClick={() => patch({ ...EMPTY_LADDER })}>
                   Shape another
                 </ActionButton>
               </>
