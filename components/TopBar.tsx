@@ -44,19 +44,32 @@ export function TopBar({
   }
 
   return (
-    <header className="h-14 shrink-0 border-b border-ink-600 bg-ink-900 flex items-center px-4 gap-3 z-30">
-      <div className="flex items-center gap-2">
-        <span className="font-display text-xl text-hazard tracking-tight">
+    <header className="h-16 shrink-0 border-b border-ink-600 bg-ink-900 flex items-center px-4 gap-4 z-30 shadow-[0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden
+          className="w-6 h-6 rounded-md bg-hazard flex items-center justify-center"
+        >
+          <span className="text-ink-900 font-display font-black text-sm leading-none">
+            J
+          </span>
+        </span>
+        <span className="font-display text-xl text-bone tracking-tight">
           Joke Forge
         </span>
       </div>
 
+      <span className="h-6 w-px bg-ink-600" aria-hidden />
+
       <button
         onClick={() => setPickerOpen(true)}
-        className="ml-2 px-3 py-1.5 rounded border border-ink-600 text-sm text-bone/80 hover:bg-ink-700 max-w-[220px] truncate"
+        className="group flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-600 text-sm text-bone/80 hover:bg-ink-700 hover:border-ink-500 max-w-[240px] transition-colors"
         title="Switch board"
       >
-        {boardName}
+        <span className="text-[10px] font-mono tracking-widest text-bone-muted group-hover:text-hazard transition-colors">
+          BOARD
+        </span>
+        <span className="truncate">{boardName}</span>
       </button>
 
       <div className="flex-1" />
@@ -64,16 +77,20 @@ export function TopBar({
       <div className="flex items-center rounded-lg border border-ink-600 overflow-hidden">
         <button
           onClick={() => onModeChange("build")}
-          className={`px-3 py-1.5 text-sm font-mono ${
-            mode === "build" ? "bg-hazard text-ink" : "text-bone/70"
+          className={`px-3.5 py-1.5 text-sm font-mono transition-colors ${
+            mode === "build"
+              ? "bg-hazard text-ink-900"
+              : "text-bone/70 hover:bg-ink-700"
           }`}
         >
           Build
         </button>
         <button
           onClick={() => onModeChange("run")}
-          className={`px-3 py-1.5 text-sm font-mono ${
-            mode === "run" ? "bg-hazard text-ink" : "text-bone/70"
+          className={`px-3.5 py-1.5 text-sm font-mono transition-colors ${
+            mode === "run"
+              ? "bg-hazard text-ink-900"
+              : "text-bone/70 hover:bg-ink-700"
           }`}
         >
           Run the set
@@ -83,7 +100,7 @@ export function TopBar({
       <div className="relative">
         <button
           onClick={() => setExportOpen((v) => !v)}
-          className="px-3 py-1.5 rounded border border-ink-600 text-sm text-bone/80 hover:bg-ink-700"
+          className="px-3 py-1.5 rounded-lg border border-ink-600 text-sm text-bone/80 hover:bg-ink-700 hover:border-ink-500 transition-colors"
         >
           Export
         </button>
@@ -128,7 +145,7 @@ export function TopBar({
 
       <button
         onClick={() => setSettingsOpen(true)}
-        className="px-3 py-1.5 rounded border border-ink-600 text-sm text-bone/80 hover:bg-ink-700"
+        className="px-3 py-1.5 rounded-lg border border-ink-600 text-sm text-bone/80 hover:bg-ink-700 hover:border-ink-500 transition-colors"
       >
         Settings
       </button>

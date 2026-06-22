@@ -19,6 +19,7 @@ import {
   STORY_HELP,
   TAG_PASS_HELP,
 } from "@/lib/methodology";
+import { kindStyle } from "@/lib/kindStyles";
 import { ActionButton, Checkbox, MonoTextarea, TextInput } from "../ui";
 import { AiSuggest } from "./AiSuggest";
 
@@ -47,7 +48,7 @@ export default function EditorPanel() {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 420, opacity: 0 }}
           transition={{ type: "spring", stiffness: 320, damping: 32 }}
-          className="absolute top-0 right-0 h-full w-[420px] max-w-full bg-ink-800 border-l border-ink-600 z-20 flex flex-col shadow-bubble"
+          className="absolute top-0 right-0 h-full w-[440px] max-w-full bg-ink-800 border-l border-ink-600 z-20 flex flex-col shadow-panel"
         >
           <PanelBody node={node} />
         </motion.aside>
@@ -63,17 +64,36 @@ function PanelBody({ node }: { node: JokeNode }) {
   const premiseText = findPremiseText(nodes, node);
   const isRoot = node.kind === "premise" && node.parentId === null;
 
+  const meta = kindStyle(node.kind);
+
   return (
     <>
+      {/* Kind colored hairline at the top so the panel reads as the same
+          object as the selected bubble. */}
+      <span
+        aria-hidden
+        className="block h-1 w-full"
+        style={{ backgroundColor: meta.color }}
+      />
       <header className="flex items-center justify-between px-5 py-4 border-b border-ink-600">
-        <span className="font-mono text-xs tracking-widest text-hazard">
-          {node.kind.toUpperCase()}
+        <span className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="inline-block w-2 h-2 rounded-full"
+            style={{ backgroundColor: meta.color }}
+          />
+          <span
+            className="font-mono text-xs tracking-[0.2em]"
+            style={{ color: meta.color }}
+          >
+            {meta.label}
+          </span>
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {!isRoot && (
             <button
               onClick={() => removeNode(node.id)}
-              className="text-xs font-mono text-red-400/80 hover:text-red-400"
+              className="text-xs font-mono text-bone-muted hover:text-red-400 transition-colors"
               title="Delete this bubble and its children"
             >
               delete
@@ -81,7 +101,7 @@ function PanelBody({ node }: { node: JokeNode }) {
           )}
           <button
             onClick={() => selectNode(null)}
-            className="text-bone/50 hover:text-bone text-lg leading-none"
+            className="text-bone-muted hover:text-bone text-xl leading-none transition-colors"
             title="Close"
           >
             ×
@@ -676,7 +696,7 @@ function CommonActions({ node }: { node: JokeNode }) {
   const canSet = node.kind === "joke" || node.kind === "idea";
 
   return (
-    <footer className="border-t border-ink-600 px-5 py-3 flex flex-wrap gap-2">
+    <footer className="border-t border-ink-600 bg-ink-900/60 px-5 py-3 flex flex-wrap gap-2">
       <ActionButton onClick={() => addAnalogyTo(node.id)}>
         Force an analogy
       </ActionButton>

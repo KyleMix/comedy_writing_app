@@ -9,12 +9,19 @@
 html,
 body {
   height: 100%;
-  background: #0a0a0a;
+  background: #0a0b0e;
 }
 
-/* React Flow theme overrides to match the near black surface and hazard accent. */
+/* React Flow theme overrides. A faint radial lift in the center gives the
+   canvas depth without pulling focus from the bubbles. */
 .react-flow {
-  background: #0a0a0a;
+  background:
+    radial-gradient(
+      120% 90% at 50% 8%,
+      rgba(242, 234, 0, 0.04) 0%,
+      rgba(10, 11, 14, 0) 55%
+    ),
+    #0a0b0e;
 }
 
 .react-flow__attribution {
@@ -22,43 +29,46 @@ body {
 }
 
 .react-flow__edge-path {
-  stroke: #4d4d4d;
-  stroke-width: 2;
+  stroke: #3b3d49;
+  stroke-width: 1.75;
 }
 
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge.active .react-flow__edge-path {
   stroke: #f2ea00;
+  stroke-width: 2;
 }
 
 .react-flow__handle {
-  background: #4d4d4d;
+  background: #5a5d6c;
   border: none;
   width: 6px;
   height: 6px;
+  opacity: 0.6;
 }
 
 .react-flow__controls {
-  background: #121212;
-  border: 1px solid #242424;
-  border-radius: 8px;
+  background: #14151a;
+  border: 1px solid #2a2c35;
+  border-radius: 10px;
   overflow: hidden;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
 }
 
 .react-flow__controls-button {
-  background: #121212;
-  border-bottom: 1px solid #242424;
-  fill: #e8e6dd;
+  background: #14151a;
+  border-bottom: 1px solid #2a2c35;
+  fill: #ece9e0;
 }
 
 .react-flow__controls-button:hover {
-  background: #242424;
+  background: #2a2c35;
 }
 
 .react-flow__minimap {
-  background: #121212;
-  border: 1px solid #242424;
-  border-radius: 8px;
+  background: #14151a;
+  border: 1px solid #2a2c35;
+  border-radius: 10px;
 }
 
 /* Thin custom scrollbar for panels. */
@@ -66,8 +76,11 @@ body {
   width: 8px;
 }
 .panel-scroll::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: #3b3d49;
   border-radius: 4px;
+}
+.panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5a5d6c;
 }
 .panel-scroll::-webkit-scrollbar-track {
   background: transparent;

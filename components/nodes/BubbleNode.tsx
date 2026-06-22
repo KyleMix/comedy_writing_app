@@ -3,23 +3,12 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
 import type { JokeNode, NodeKind } from "@/lib/types";
+import { kindStyle } from "@/lib/kindStyles";
 
-// One renderer for every bubble kind. Hubs read larger and bolder than
-// leaf nodes. Confirmed jokes and the active path get the hazard border.
-
-const KIND_META: Record<
-  NodeKind,
-  { tag: string; accentText: string }
-> = {
-  premise: { tag: "PREMISE", accentText: "text-hazard" },
-  story: { tag: "STORY", accentText: "text-bone" },
-  question: { tag: "QUESTION", accentText: "text-hazard" },
-  idea: { tag: "IDEA", accentText: "text-bone" },
-  listing: { tag: "LISTING", accentText: "text-hazard" },
-  analogy: { tag: "ANALOGY", accentText: "text-hazard" },
-  cliche: { tag: "CLICHE", accentText: "text-hazard" },
-  joke: { tag: "JOKE", accentText: "text-hazard" },
-};
+// One renderer for every bubble kind. Each kind carries a colored accent bar
+// and label so the board is scannable at a glance. Hubs read larger and
+// bolder. The hazard ring is reserved for selection, and the hazard border
+// for confirmed jokes, so the active path stays the dominant signal.
 
 export type BubbleData = {
   node: JokeNode;
@@ -28,19 +17,19 @@ export type BubbleData = {
 
 export function BubbleNode({ data }: NodeProps) {
   const { node, selected } = data as unknown as BubbleData;
-  const meta = KIND_META[node.kind];
+  const meta = kindStyle(node.kind);
   const isHub = node.kind === "premise";
   const confirmed = node.kind === "joke" || node.confirmed;
 
   const borderClass = selected
     ? "border-hazard shadow-hazard"
     : confirmed
-      ? "border-hazard"
-      : "border-ink-500";
+      ? "border-hazard/80"
+      : "border-ink-600";
 
   const sizeClass = isHub
-    ? "min-w-[220px] max-w-[300px] px-5 py-4"
-    : "min-w-[150px] max-w-[230px] px-4 py-3";
+    ? "min-w-[230px] max-w-[310px] pl-6 pr-5 py-4"
+    : "min-w-[160px] max-w-[240px] pl-5 pr-4 py-3";
 
   const display = node.body || node.title || placeholderFor(node.kind);
 
@@ -49,19 +38,35 @@ export function BubbleNode({ data }: NodeProps) {
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      className={`relative rounded-2xl border-2 ${borderClass} ${sizeClass} ${
+      className={`relative rounded-2xl border ${borderClass} ${sizeClass} ${
         isHub ? "bg-ink-700" : "bg-ink-800"
       } shadow-bubble cursor-pointer select-none`}
     >
+      {/* Left accent bar in the kind color, readable even when zoomed out.
+          Rounded on the left to follow the card corners without clipping the
+          connection handles. */}
+      <span
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl"
+        style={{ backgroundColor: meta.color, opacity: confirmed ? 1 : 0.85 }}
+      />
       <Handle type="target" position={Position.Top} isConnectable={false} />
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <span
-          className={`text-[10px] font-mono tracking-widest ${meta.accentText}`}
-        >
-          {meta.tag}
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: meta.color }}
+          />
+          <span
+            className="text-[10px] font-mono tracking-[0.18em]"
+            style={{ color: meta.color }}
+          >
+            {meta.label}
+          </span>
         </span>
         {node.inSet && (
-          <span className="text-[9px] font-mono text-ink-DEFAULT bg-hazard px-1.5 py-0.5 rounded">
+          <span className="text-[9px] font-mono font-semibold text-ink-900 bg-hazard px-1.5 py-0.5 rounded">
             IN SET
           </span>
         )}

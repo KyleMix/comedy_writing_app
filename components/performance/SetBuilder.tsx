@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import type { JokeNode } from "@/lib/types";
+import { kindStyle } from "@/lib/kindStyles";
 
 // Drag confirmed jokes (and opted in ideas) into an ordered path from the
 // small quips to the big joke. A live laughs per minute feel is derived
@@ -194,13 +195,13 @@ export function SetBuilder() {
                 className="flex items-start gap-2 bg-ink-900 border border-ink-600 rounded-lg p-3"
               >
                 <span
-                  className={`text-[9px] font-mono px-1.5 py-0.5 rounded self-start ${
-                    n.kind === "joke"
-                      ? "bg-hazard text-ink"
-                      : "border border-ink-500 text-bone/50"
-                  }`}
+                  className="text-[9px] font-mono px-1.5 py-0.5 rounded self-start border"
+                  style={{
+                    color: kindStyle(n.kind).color,
+                    borderColor: kindStyle(n.kind).color,
+                  }}
                 >
-                  {n.kind.toUpperCase()}
+                  {kindStyle(n.kind).label}
                 </span>
                 <p className="flex-1 text-sm text-bone/80">
                   {n.body || n.title}
