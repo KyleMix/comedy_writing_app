@@ -156,6 +156,67 @@ function build(type: QuestionType, text: string): string | null {
   }
 }
 
+// The ordered prompt deck for the joke-first Forge. Leads with attitude,
+// then the engines that best fit this premise, then the wider angles, each
+// already tailored to the entered words. The comedian writes a joke against
+// one prompt at a time.
+export interface ForgePrompt {
+  key: string;
+  title: string;
+  text: string;
+  questionType?: QuestionType;
+}
+
+export function forgePromptSequence(premise: string): ForgePrompt[] {
+  const text = premise.trim();
+  if (!text) return [];
+
+  const prompt = (type: QuestionType): ForgePrompt => {
+    const spec = getQuestionSpec(type);
+    const s = specializeQuestion(type, premise);
+    return { key: type, title: spec.title, text: s.specific ?? s.base, questionType: type };
+  };
+
+  const order: QuestionType[] = ["emotional_xray"]; // attitude first, always
+
+  // Then the engines recommended for this premise.
+  for (const rec of recommendTechniques(premise)) {
+    if (rec.questionType && !order.includes(rec.questionType)) {
+      order.push(rec.questionType);
+    }
+  }
+
+  // Then the rest of the angles, so the deck never runs dry.
+  const rest: QuestionType[] = [
+    "double_entendre",
+    "converging",
+    "shatter_assumption",
+    "literal",
+    "wrong_frame",
+    "worst_person",
+    "reverse_power",
+    "escalate",
+    "alien_dog",
+    "own_fault",
+    "hidden_shame",
+    "assumption_stack",
+  ];
+  for (const t of rest) if (!order.includes(t)) order.push(t);
+
+  const prompts = order.map(prompt);
+
+  // A forced analogy belongs in the deck even though it is not a question
+  // type. Slot it in second, right after attitude.
+  const subject = subjectGuess(text) || "this";
+  prompts.splice(1, 0, {
+    key: "analogy",
+    title: "Forced analogy",
+    text: `"${subject}" is like ____. Fill the blank, then write a punchline that is true for both sides.`,
+  });
+
+  return prompts;
+}
+
 function truncate(text: string, max = 70): string {
   const clean = text.replace(/\s+/g, " ").trim();
   return clean.length > max ? clean.slice(0, max).trim() + "..." : clean;

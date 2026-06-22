@@ -15,12 +15,14 @@ import { BoardPicker } from "./BoardPicker";
 import { SettingsModal } from "./SettingsModal";
 import { SubmitJokeModal } from "./SubmitJokeModal";
 
+export type Mode = "forge" | "map" | "run";
+
 export function TopBar({
   mode,
   onModeChange,
 }: {
-  mode: "build" | "run";
-  onModeChange: (m: "build" | "run") => void;
+  mode: Mode;
+  onModeChange: (m: Mode) => void;
 }) {
   const boardName = useStore((s) => s.boardName);
   const boardId = useStore((s) => s.boardId);
@@ -110,18 +112,28 @@ export function TopBar({
 
       <div className="flex items-center rounded-lg border border-ink-600 overflow-hidden">
         <button
-          onClick={() => onModeChange("build")}
+          onClick={() => onModeChange("forge")}
           className={`px-3.5 py-1.5 text-sm font-mono transition-colors ${
-            mode === "build"
+            mode === "forge"
               ? "bg-hazard text-ink-900"
               : "text-bone/70 hover:bg-ink-700"
           }`}
         >
-          Build
+          Forge
+        </button>
+        <button
+          onClick={() => onModeChange("map")}
+          className={`px-3.5 py-1.5 text-sm font-mono transition-colors border-l border-ink-600 ${
+            mode === "map"
+              ? "bg-hazard text-ink-900"
+              : "text-bone/70 hover:bg-ink-700"
+          }`}
+        >
+          Map
         </button>
         <button
           onClick={() => onModeChange("run")}
-          className={`px-3.5 py-1.5 text-sm font-mono transition-colors ${
+          className={`px-3.5 py-1.5 text-sm font-mono transition-colors border-l border-ink-600 ${
             mode === "run"
               ? "bg-hazard text-ink-900"
               : "text-bone/70 hover:bg-ink-700"
@@ -220,7 +232,7 @@ export function TopBar({
         <SubmitJokeModal
           onSubmitted={() => {
             setSubmitOpen(false);
-            onModeChange("build");
+            onModeChange("map");
           }}
           onClose={() => setSubmitOpen(false)}
         />

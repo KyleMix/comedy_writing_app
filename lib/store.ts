@@ -68,6 +68,7 @@ interface JokeForgeState {
   removeNode: (id: string) => void;
 
   addIdeaChild: (parentId: string, text: string, extra?: Partial<JokeNode>) => string;
+  addPremise: (text?: string) => string;
   addAnalogyTo: (parentId: string) => string;
   addClicheTo: (parentId: string) => string;
   addStoryTo: (parentId: string) => string;
@@ -376,6 +377,40 @@ export const useStore = create<JokeForgeState>((setState, getState) => {
       });
       touch();
       return node.id;
+    },
+
+    addPremise: (text = "") => {
+      const state = getState();
+      const clean = stripDashes(text);
+      // Drop the new hub clear of everything already on the board.
+      const x =
+        state.nodes.length > 0
+          ? Math.max(...state.nodes.map((n) => n.position.x)) + 760
+          : 0;
+      const premise = makeNode("premise", {
+        body: clean,
+        title: clean.slice(0, 60) || "Premise",
+        position: { x, y: 0 },
+      });
+      let nodes = [...state.nodes, premise];
+      let edges = [...state.edges];
+      // If it arrives with text, spawn the standard bubbles so the Map view
+      // stays consistent with a premise typed on the canvas.
+      if (clean.trim()) {
+        const { nodes: children } = buildPremiseChildren(premise);
+        nodes = [...nodes, ...children];
+        edges = [
+          ...edges,
+          ...children.map((c) => ({
+            id: uid(),
+            source: premise.id,
+            target: c.id,
+          })),
+        ];
+      }
+      setState({ nodes, edges, selectedNodeId: premise.id });
+      touch();
+      return premise.id;
     },
 
     addAnalogyTo: (parentId) => {

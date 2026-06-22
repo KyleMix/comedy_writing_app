@@ -1,12 +1,22 @@
 # Joke Forge
 
-A local first node graph workbench that helps a stand up comedian develop a joke
-outward from a single premise, using a fixed comedy methodology as the engine.
+A local first tool for a stand up comedian to get jokes down fast, using a fixed
+comedy methodology as the engine. Output above all else.
 
-The premise sits at the center as a hub. Question bubbles break off the hub.
-Answers become idea bubbles. Any idea bubble can be promoted into its own premise
-hub, so the board grows recursively into a web of jokes. A performance mode then
-linearizes a chosen path into a memorizable set.
+Three modes, with a top bar toggle:
+
+- Forge, the default front door. You drop a premise and the app fires one
+  tailored prompt at a time, attitude first, then the engines that fit your
+  exact words. You write a joke against each prompt and capture it. A running
+  Jokes list collects everything you write.
+- Map, the optional node graph. The same premises and jokes shown as a web:
+  the premise as a hub, question and idea bubbles breaking off it, any bubble
+  promotable into its own premise. For when you want to see structure.
+- Run the set, the performance mode. Order the jokes into a set, drill them on
+  recall cards, and run a teleprompter.
+
+Everything you capture in Forge is the same joke that shows up on the Map and in
+the set, so the three modes are three views of one board.
 
 ## The methodology
 
@@ -43,9 +53,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Type a premise. The three questions and the listing
-bubble pop out. Answer them, branch ideas, force analogies, confirm jokes, then
-switch to Run the set to build, drill, and run a teleprompter.
+Open http://localhost:3000. You land in Forge. Type a premise, work the prompts,
+and capture jokes into the list. Flip to Map to see the web, or Run the set to
+order, drill, and run a teleprompter.
 
 Everything autosaves to IndexedDB. Close the tab and come back to the same board.
 
